@@ -536,7 +536,14 @@ fn completion_installation_supports_preview_idempotence_and_foreign_file_protect
     };
     let preview = install(true);
     success(&preview);
-    assert!(stdout(&preview).contains(&target.display().to_string()));
+    let preview_text = stdout(&preview);
+    let preview_path = preview_text
+        .lines()
+        .next()
+        .unwrap()
+        .strip_prefix("Would install completions to ")
+        .unwrap();
+    assert_eq!(Path::new(preview_path), target);
     assert!(!target.exists());
     success(&install(false));
     assert!(

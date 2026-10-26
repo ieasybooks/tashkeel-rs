@@ -16,6 +16,7 @@ pub(super) const WORD: [&str; 2] = [
 ];
 pub(super) const MC: &str = "http://schemas.openxmlformats.org/markup-compatibility/2006";
 const XML: &str = "http://www.w3.org/XML/1998/namespace";
+const MAX_NAMESPACE_DECLARATION_BYTES: usize = 1024;
 
 pub(super) struct ParsedXml {
     pub(super) tree: XmlTree,
@@ -232,7 +233,19 @@ fn check_attribute_count(element: &quick_xml::events::BytesStart<'_>, limit: usi
         if index >= limit {
             return Err(document("XML element exceeds the attribute count limit"));
         }
-        attribute.map_err(|err| document(format!("invalid XML attribute: {err}")))?;
+        let attribute =
+            attribute.map_err(|err| document(format!("invalid XML attribute: {err}")))?;
+        let name = attribute.key.as_ref();
+        // Inherited namespace URIs participate in expanded-name comparisons.
+        // Bound their size before parsing/indexing so one enormous declaration
+        // cannot multiply hashing work across every descendant attribute.
+        if (name == b"xmlns" || name.starts_with(b"xmlns:"))
+            && attribute.value.len() > MAX_NAMESPACE_DECLARATION_BYTES
+        {
+            return Err(document(
+                "XML namespace declaration exceeds the 1024-byte limit",
+            ));
+        }
     }
     Ok(())
 }

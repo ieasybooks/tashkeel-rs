@@ -72,7 +72,13 @@ def main():
     else:
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
             for source, destination in selected.items():
-                stream = archive.extractfile(f"{root}/{source}")
+                # Microsoft's macOS archive prefixes member names with ./;
+                # Linux archives use the root directory directly.
+                try:
+                    member = archive.getmember(f"{root}/{source}")
+                except KeyError:
+                    member = archive.getmember(f"./{root}/{source}")
+                stream = archive.extractfile(member)
                 if stream is None:
                     raise SystemExit(f"Missing runtime file: {source}")
                 (output / destination).write_bytes(stream.read())

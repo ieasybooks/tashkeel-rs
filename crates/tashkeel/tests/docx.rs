@@ -663,3 +663,32 @@ fn rejects_duplicate_zip_names_even_when_the_zip_reader_deduplicates_them() {
         Err(Error::Document(_))
     ));
 }
+
+#[test]
+fn bounds_inherited_namespace_values_before_expanded_name_hashing() {
+    let namespace_document = |length: usize, body: &str| {
+        let uri = format!("urn:{}", "x".repeat(length - 4));
+        package_xml(body).replacen(
+            "<w:document ",
+            &format!("<w:document xmlns:x=\"{uri}\" "),
+            1,
+        )
+    };
+    let allowed = pack(&parts(&namespace_document(1024, "<u x:a='v'/>")));
+    assert_eq!(
+        transform(&allowed, |text| Ok(text.to_owned())).unwrap(),
+        allowed
+    );
+    for (length, count) in [(1025, 1), (1_000_000, 50_000)] {
+        // The large case is below XML event/byte limits but would repeatedly
+        // hash the inherited megabyte URI without the declaration-size bound.
+        let input = pack(&parts(&namespace_document(
+            length,
+            &"<u x:a='v'/>".repeat(count),
+        )));
+        assert!(matches!(
+            transform(&input, |_| panic!("oversized namespace reached transformation")),
+            Err(Error::Document(message)) if message.contains("namespace declaration")
+        ));
+    }
+}
