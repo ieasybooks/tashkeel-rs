@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt, clippy, tests, dependencies, docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - uses: jdx/mise-action@v5.2.3
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo deny --locked check
+      - name: Check dependency notices
+        run: cargo about generate --locked --all-features --workspace --fail about.hbs --output-file "$RUNNER_TEMP/THIRD-PARTY-LICENSES"
+      - run: actionlint
+      - name: Check generated CLI reference
+        run: |
+          sh scripts/cli-docs.sh
+          git diff --exit-code -- docs/
+      - name: Check publishable packages
+        run: cargo package --workspace --locked
+
+  test:
+    name: model-free tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      AWS_LC_SYS_PREBUILT_NASM: 1
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --locked
+
+  models:
+    name: CPU models (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            library: libonnxruntime.so
+            executable: tashkeel
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            library: libonnxruntime.so
+            executable: tashkeel
+          - os: macos-15
+            target: aarch64-apple-darwin
+            library: libonnxruntime.dylib
+            executable: tashkeel
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+            library: onnxruntime.dll
+            executable: tashkeel.exe
+    env:
+      AWS_LC_SYS_PREBUILT_NASM: 1
+      LIBRARY: ${{ matrix.library }}
+      EXECUTABLE: ${{ matrix.executable }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pinned CPU ONNX Runtime
+        run: python .github/scripts/onnxruntime.py
+      - run: cargo build --locked
+      - name: Exercise both models with a relocated binary and adjacent runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/tashkeel-relocated"
+          cp "target/debug/$EXECUTABLE" "$TASHKEEL_RUNTIME_DIR/$LIBRARY" "$RUNNER_TEMP/tashkeel-relocated/"
+          unset ORT_DYLIB_PATH
+          python scripts/smoke-models.py "$RUNNER_TEMP/tashkeel-relocated/$EXECUTABLE"

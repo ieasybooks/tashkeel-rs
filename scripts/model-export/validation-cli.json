@@ -1,0 +1,167 @@
+{
+  "scope": "Fixed 2500-line Fadel gold corpus through the actual Rust CLI's default Shakkelha CPU document pipeline; not general quality or live historical GPU equivalence",
+  "gold_sha256": "4e851ff836f0a178abb15d9f4a8bcf92748b77cc0d67030d9fae2fbe698baa12",
+  "model_sha256": "41ed03075e80847aaef2bfdb65f123b7f225ff6a179a507b1ec3e6152184fa71",
+  "vocabulary_sha256": "e81c0a089cbfd95eaef3d7130c2c3e1f0cc5f7471f9c4e71f807b7ebba1eccb1",
+  "binary": {
+    "path": "/home/alifadel/.cache/mbx/targets/v1/ecb0846b14ab777c0c0764d65ce42d7bc795fea148003d54c9a7bad5acdb2bee/release/tashkeel",
+    "sha256": "ee8f2d986d11b75d99004f7587b3433b63a3d4eeea6ace8bc5dcac151ac3558a"
+  },
+  "runtime": {
+    "path": "/home/alifadel/.cache/mbx/targets/v1/ecb0846b14ab777c0c0764d65ce42d7bc795fea148003d54c9a7bad5acdb2bee/onnxruntime/x86_64-unknown-linux-gnu/libonnxruntime.so",
+    "sha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e"
+  },
+  "command": [
+    "/home/alifadel/.cache/mbx/targets/v1/ecb0846b14ab777c0c0764d65ce42d7bc795fea148003d54c9a7bad5acdb2bee/release/tashkeel",
+    "-",
+    "--model",
+    "shakkelha",
+    "--model-dir",
+    "/tmp/tashkeel-integration-models/shakkelha",
+    "--offline",
+    "--quiet"
+  ],
+  "environment": {
+    "ORT_DYLIB_PATH": "/home/alifadel/.cache/mbx/targets/v1/ecb0846b14ab777c0c0764d65ce42d7bc795fea148003d54c9a7bad5acdb2bee/onnxruntime/x86_64-unknown-linux-gnu/libonnxruntime.so"
+  },
+  "defaults": {
+    "chunk_size": 500,
+    "threads": 1,
+    "verified_from_binary_help": true,
+    "flags_omitted": true
+  },
+  "input": {
+    "gold_path": "/tmp/tashkeel-research-shakkelha/test.txt",
+    "lines": 2500,
+    "source_characters": 572702,
+    "source_bytes": 1004092,
+    "source_sha256": "0fa623d8ca459228baeb2676053c9ad2cdb29a7328a4377221df095cb3662a8b",
+    "removed_marks": [
+      "U+064B",
+      "U+064C",
+      "U+064D",
+      "U+064E",
+      "U+064F",
+      "U+0650",
+      "U+0651",
+      "U+0652"
+    ],
+    "submission": "one complete UTF-8 document on stdin; no line stripping or newline normalization"
+  },
+  "output": {
+    "path": "/home/alifadel/.cache/mbx/targets/v1/ecb0846b14ab777c0c0764d65ce42d7bc795fea148003d54c9a7bad5acdb2bee/validation/cli/predicted.txt",
+    "sha256": "d1857d5017a370ac9e9ae1e6e5a3b93cc23abfb416d044650085f4fe9c6afa45",
+    "lines": 2500,
+    "bytes": 1747490,
+    "exact_source_preserved_after_stripping_marks": true,
+    "stderr_path": "/home/alifadel/.cache/mbx/targets/v1/ecb0846b14ab777c0c0764d65ce42d7bc795fea148003d54c9a7bad5acdb2bee/validation/cli/stderr.txt",
+    "stderr_bytes": 0
+  },
+  "inference_wall_seconds": 90.358,
+  "timing_note": "Single shared-host run; not a benchmark",
+  "fadel_evaluator": {
+    "path": "/tmp/tashkeel-research-shakkelha/diacritization_stat.py",
+    "sha256": "535b729c349965bfcb6863fc65c06a5465d3b900128ce19ce135998620e32fc8",
+    "style": "Fadel",
+    "results": {
+      "rust_cli_default": [
+        {
+          "case_endings": true,
+          "include_no_diacritic": true,
+          "DER_percent": 1.74,
+          "WER_percent": 5.26
+        },
+        {
+          "case_endings": false,
+          "include_no_diacritic": true,
+          "DER_percent": 1.38,
+          "WER_percent": 3.01
+        },
+        {
+          "case_endings": true,
+          "include_no_diacritic": false,
+          "DER_percent": 2.01,
+          "WER_percent": 5.05
+        },
+        {
+          "case_endings": false,
+          "include_no_diacritic": false,
+          "DER_percent": 1.59,
+          "WER_percent": 2.93
+        }
+      ]
+    }
+  },
+  "whole_line_comparison": {
+    "baseline_path": "/home/alifadel/repositories/tashkeel-rs/scripts/model-export/validation-full.json",
+    "baseline_sha256": "b176415fde05a91748e8277b219f352f5e4028d1e6928a9400672b37f38b4714",
+    "scope": "unchunked line-level batch-one CPU model; not Rust default chunking or live historical GPU execution",
+    "results": [
+      {
+        "case_endings": true,
+        "include_no_diacritic": true,
+        "onnx": {
+          "DER_percent": 1.68,
+          "WER_percent": 5.08,
+          "DER_delta_percentage_points": 0.06,
+          "WER_delta_percentage_points": 0.18
+        },
+        "published": {
+          "DER_percent": 1.69,
+          "WER_percent": 5.09,
+          "DER_delta_percentage_points": 0.05,
+          "WER_delta_percentage_points": 0.17
+        }
+      },
+      {
+        "case_endings": false,
+        "include_no_diacritic": true,
+        "onnx": {
+          "DER_percent": 1.34,
+          "WER_percent": 2.9,
+          "DER_delta_percentage_points": 0.04,
+          "WER_delta_percentage_points": 0.11
+        },
+        "published": {
+          "DER_percent": 1.34,
+          "WER_percent": 2.91,
+          "DER_delta_percentage_points": 0.04,
+          "WER_delta_percentage_points": 0.1
+        }
+      },
+      {
+        "case_endings": true,
+        "include_no_diacritic": false,
+        "onnx": {
+          "DER_percent": 1.94,
+          "WER_percent": 4.87,
+          "DER_delta_percentage_points": 0.07,
+          "WER_delta_percentage_points": 0.18
+        },
+        "published": {
+          "DER_percent": 1.95,
+          "WER_percent": 4.89,
+          "DER_delta_percentage_points": 0.06,
+          "WER_delta_percentage_points": 0.16
+        }
+      },
+      {
+        "case_endings": false,
+        "include_no_diacritic": false,
+        "onnx": {
+          "DER_percent": 1.53,
+          "WER_percent": 2.83,
+          "DER_delta_percentage_points": 0.06,
+          "WER_delta_percentage_points": 0.1
+        },
+        "published": {
+          "DER_percent": 1.54,
+          "WER_percent": 2.83,
+          "DER_delta_percentage_points": 0.05,
+          "WER_delta_percentage_points": 0.1
+        }
+      }
+    ],
+    "delta_note": "CLI minus existing whole-line scores, in percentage points; upstream scores round to two decimals"
+  }
+}

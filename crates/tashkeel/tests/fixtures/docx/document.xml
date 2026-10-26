@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<!-- lexical formatting and unknown markup must survive unchanged -->
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:fixture:extension" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" mc:Ignorable="x">
+  <w:body>
+    <w:p x:keep="  opaque &amp; unchanged  ">
+      <w:pPr><w:pStyle w:val="ArabicTitle"/><w:bidi/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Amiri" w:cs="Amiri"/><w:b/><w:szCs w:val="32"/></w:rPr><w:t>ك</w:t></w:r>
+      <w:r><w:rPr><w:i/><w:color w:val="0055AA"/></w:rPr><w:t>ُتب</w:t></w:r>
+      <w:hyperlink r:id="link"><w:r><w:rPr><w:u w:val="single"/></w:rPr><w:t xml:space="preserve"> عربي &amp; English 42!</w:t></w:r></w:hyperlink>
+      <w:r><w:tab/><w:t>باب</w:t><w:br/><w:t>بيت</w:t></w:r>
+      <w:r><w:drawing><wp:inline><wp:docPr id="1" name="small image"/><a:graphic><a:graphicData uri="urn:fixture:image"><a:blip r:embed="image"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+      <w:bookmarkStart w:id="0" w:name="kept"/><w:bookmarkEnd w:id="0"/>
+      <x:opaque x:attr="1"><x:label>عربي</x:label></x:opaque>
+    </w:p>
+    <w:tbl><w:tblPr><w:tblBorders><w:top w:val="single"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>جدول</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+    <w:p><w:r><w:t>قبل </w:t></w:r><w:del w:id="1" w:author="Fixture"><w:r><w:delText>محذوف</w:delText><w:t>محذوف</w:t></w:r></w:del><w:moveFrom w:id="2"><w:r><w:t>قديم</w:t></w:r></w:moveFrom><w:ins w:id="3"><w:r><w:t>جديد </w:t></w:r></w:ins><w:moveTo w:id="4"><w:r><w:t>نقل</w:t></w:r></w:moveTo></w:p>
+    <w:p><w:r><w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> REF اسم </w:instrText><w:t>تعليمات</w:t><w:fldChar w:fldCharType="separate"/><w:t>نتيجة</w:t><w:fldChar w:fldCharType="end"/></w:r></w:p>
+    <w:sectPr><w:headerReference w:type="default" r:id="header"/><w:footerReference w:type="default" r:id="footer"/><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>
+  </w:body>
+</w:document>

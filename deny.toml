@@ -1,0 +1,24 @@
+[graph]
+all-features = true
+
+[advisories]
+# docxml 0.3.1 uses zip 7.4.0. These three advisories affect disk extraction,
+# symlink creation, and chmod during extraction. Neither docxml nor tashkeel
+# calls those APIs: uploaded parts are bounded in memory, and all output file
+# destinations are controlled by our code. See docs/dependencies.md. Re-audit
+# these exceptions when upgrading docxml; do not exempt other zip advisories.
+ignore = ["RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369"]
+
+[licenses]
+allow = ["Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CDLA-Permissive-2.0", "ISC", "MIT", "MIT-0", "MPL-2.0", "Unicode-3.0", "Zlib", "BSL-1.0", "bzip2-1.0.6"]
+confidence-threshold = 0.8
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
