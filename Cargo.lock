@@ -363,7 +363,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d13a3374783ece9504a3a4d8ce1c4aa3c0f13c5f4e26aab72d147abf9d39583a"
 dependencies = [
- "quick-xml",
+ "quick-xml 0.41.0",
  "thiserror",
  "zip 7.4.0",
 ]
@@ -1179,6 +1179,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "quinn"
 version = "0.11.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1722,7 +1731,7 @@ dependencies = [
  "docxml",
  "libloading",
  "ort",
- "quick-xml",
+ "quick-xml 0.42.0",
  "reqwest",
  "serde",
  "serde_json",
