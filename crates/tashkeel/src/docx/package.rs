@@ -21,12 +21,14 @@ const MAIN_TYPE: &str =
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
 
 pub(super) struct StoryPart {
+    // Resolved package references use ASCII-canonical names throughout.
     pub(super) name: String,
     pub(super) root: &'static str,
 }
 
 pub(super) struct Package<'a> {
     archive: ZipArchive<Cursor<&'a [u8]>>,
+    // ASCII-canonical keys are only for lookup; ZIP metadata keeps the spelling.
     entries: BTreeMap<String, usize>,
     limits: Limits,
     inflated_size: usize,
@@ -36,6 +38,24 @@ struct Relationship {
     kind: String,
     target: String,
     external: bool,
+}
+
+struct ContentTypes {
+    overrides: BTreeMap<String, String>,
+    defaults: BTreeMap<String, String>,
+}
+
+impl ContentTypes {
+    fn get(&self, canonical_name: &str) -> Option<&str> {
+        // Defaults stay shared, even when a large value covers many tiny parts.
+        self.overrides
+            .get(canonical_name)
+            .or_else(|| {
+                let (_, extension) = canonical_name.rsplit_once('.')?;
+                self.defaults.get(extension)
+            })
+            .map(String::as_str)
+    }
 }
 
 impl<'a> Package<'a> {
@@ -53,9 +73,10 @@ impl<'a> Package<'a> {
         let mut inflated_size = 0usize;
         for index in 0..archive.len() {
             let mut entry = archive.by_index(index).map_err(zip_error)?;
-            let name = entry.name().map_err(zip_error)?.into_owned();
+            let mut name = entry.name().map_err(zip_error)?.into_owned();
             validate_name(&name, entry.is_dir())?;
-            if !canonical_names.insert(name.trim_end_matches('/').to_ascii_lowercase()) {
+            name.make_ascii_lowercase();
+            if !canonical_names.insert(name.trim_end_matches('/').to_owned()) {
                 return Err(document("ZIP contains equivalent or duplicate part names"));
             }
             if entry.is_symlink() || entry.encrypted() {
@@ -98,7 +119,7 @@ impl<'a> Package<'a> {
         }
         if entries
             .keys()
-            .any(|name| name.to_ascii_lowercase().starts_with("_xmlsignatures/"))
+            .any(|name| name.starts_with("_xmlsignatures/"))
         {
             return Err(document(
                 "digitally signed DOCX packages cannot be edited without invalidating signatures",
@@ -211,7 +232,7 @@ impl<'a> Package<'a> {
             .ok_or_else(|| {
                 document("DOCX must have exactly one internal officeDocument relationship")
             })?;
-        if types.get(&main.target).map(String::as_str) != Some(MAIN_TYPE) {
+        if types.get(&main.target) != Some(MAIN_TYPE) {
             return Err(document(
                 "only DOCX documents are supported; templates and macro-enabled documents are unsupported",
             ));
@@ -248,7 +269,7 @@ impl<'a> Package<'a> {
                 let expected = format!(
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.{kind}+xml"
                 );
-                if types.get(&rel.target) != Some(&expected) {
+                if types.get(&rel.target) != Some(expected.as_str()) {
                     return Err(document(format!("invalid content type for {}", rel.target)));
                 }
                 pending.push_back(StoryPart {
@@ -261,8 +282,8 @@ impl<'a> Package<'a> {
         Ok(stories)
     }
 
-    fn content_types(&mut self) -> Result<BTreeMap<String, String>> {
-        let bytes = self.read_part("[Content_Types].xml")?;
+    fn content_types(&mut self) -> Result<ContentTypes> {
+        let bytes = self.read_part("[content_types].xml")?;
         let xml = ParsedXml::parse(&bytes, self.limits)?;
         let tree = &xml.tree;
         if !is_element(&xml, tree.root(), TYPES, "Types") {
@@ -296,15 +317,10 @@ impl<'a> Package<'a> {
                 return Err(document("unexpected element in package content types"));
             }
         }
-        for name in self.entries.keys() {
-            if !overrides.contains_key(name)
-                && let Some((_, extension)) = name.rsplit_once('.')
-                && let Some(content_type) = defaults.get(&extension.to_ascii_lowercase())
-            {
-                overrides.insert(name.clone(), content_type.clone());
-            }
-        }
-        Ok(overrides)
+        Ok(ContentTypes {
+            overrides,
+            defaults,
+        })
     }
 
     pub(super) fn write(
@@ -330,7 +346,7 @@ impl<'a> Package<'a> {
         for index in 0..self.archive.len() {
             let entry = self.archive.by_index(index).map_err(zip_error)?;
             let name = entry.name().map_err(zip_error)?.into_owned();
-            if let Some(bytes) = changed.get(&name) {
+            if let Some(bytes) = changed.get(&name.to_ascii_lowercase()) {
                 let options = entry
                     .options()
                     .into_full_options()
@@ -410,8 +426,9 @@ fn resolve_target(source: &str, target: &str) -> Result<String> {
             _ => parts.push(segment),
         }
     }
-    let result = parts.join("/");
+    let mut result = parts.join("/");
     validate_name(&result, false)?;
+    result.make_ascii_lowercase();
     Ok(result)
 }
 
@@ -532,5 +549,67 @@ impl Write for BoundedWriter {
 impl Seek for BoundedWriter {
     fn seek(&mut self, position: SeekFrom) -> io::Result<u64> {
         self.cursor.seek(position)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    #[test]
+    fn large_content_type_default_is_shared_across_many_parts() {
+        const TINY_PARTS: usize = 192;
+        let default_type = format!("application/{}", "x".repeat(1024 * 1024 - 12));
+        let types_xml = format!(
+            "<Types xmlns='{TYPES}'><Default Extension='BIN' ContentType='{default_type}'/><Override PartName='/word/document.xml' ContentType='{MAIN_TYPE}'/></Types>"
+        );
+        let root_rels = format!(
+            "<Relationships xmlns='{RELS}'><Relationship Id='main' Type='{}officeDocument' Target='word/document.xml'/></Relationships>",
+            REL_BASES[0]
+        );
+        let document = b"<w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body/></w:document>";
+        let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+        for (name, bytes) in [
+            ("[Content_Types].xml", types_xml.as_bytes()),
+            ("_rels/.rels", root_rels.as_bytes()),
+            ("word/document.xml", document.as_slice()),
+        ] {
+            writer.start_file(name, options).unwrap();
+            writer.write_all(bytes).unwrap();
+        }
+        for index in 0..TINY_PARTS {
+            writer
+                .start_file(format!("tiny/part-{index}.BIN"), options)
+                .unwrap();
+            writer.write_all(b"x").unwrap();
+        }
+        let input = writer.finish().unwrap().into_inner();
+        let mut package = Package::read(&input, Limits::default()).unwrap();
+        let types = package.content_types().unwrap();
+
+        // Prove bounded storage and shared borrows without measuring the process
+        // allocator or reproducing the former 192 MiB of expanded defaults.
+        assert_eq!(types.defaults.len(), 1);
+        assert_eq!(types.overrides.len(), 1);
+        let default = types.defaults["bin"].as_str();
+        assert_eq!(default, default_type);
+        let mut matched = 0;
+        for name in package.entries.keys().filter(|name| {
+            name.rsplit_once('.')
+                .is_some_and(|(_, extension)| extension.eq_ignore_ascii_case("bin"))
+        }) {
+            assert!(std::ptr::eq(types.get(name).unwrap(), default));
+            matched += 1;
+        }
+        assert_eq!(matched, TINY_PARTS);
+        assert_eq!(types.get("word/document.xml"), Some(MAIN_TYPE));
+        assert_eq!(types.get("unknown.part"), None);
+        assert_eq!(
+            super::super::transform(&input, |text| Ok(text.to_owned())).unwrap(),
+            input
+        );
     }
 }

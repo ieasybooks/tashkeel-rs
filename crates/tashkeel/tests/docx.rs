@@ -400,6 +400,157 @@ fn follows_relationships_instead_of_assuming_word_document_location() {
 }
 
 #[test]
+fn matches_main_part_references_ignoring_ascii_case() {
+    let xml = package_xml("<w:p><w:r><w:t>كتب</w:t></w:r></w:p>");
+    for (entry, target, override_name) in [
+        (
+            "word/document.xml",
+            "WORD/DOCUMENT.XML",
+            "/word/document.xml",
+        ),
+        (
+            "word/document.xml",
+            "word/document.xml",
+            "/WORD/DOCUMENT.XML",
+        ),
+        (
+            "WoRd/DoCuMeNt.XmL",
+            "/WORD/DOCUMENT.XML",
+            "/word/document.xml",
+        ),
+    ] {
+        let mut original = parts(&xml);
+        let document = original.remove("word/document.xml").unwrap();
+        original.insert(entry.into(), document);
+        for (name, from, to) in [
+            ("_rels/.rels", "word/document.xml", target),
+            ("[Content_Types].xml", "/word/document.xml", override_name),
+        ] {
+            let updated = String::from_utf8(original[name].clone())
+                .unwrap()
+                .replace(from, to);
+            original.insert(name.into(), updated.into_bytes());
+        }
+        let input = pack(&original);
+        assert_eq!(transform(&input, |text| Ok(text.into())).unwrap(), input);
+        let output = transform(&input, add_fatha).unwrap();
+        original.insert(entry.into(), xml.replace("كتب", "كَتَبَ").into_bytes());
+        assert_eq!(
+            unpack(&output),
+            original,
+            "{entry}, {target}, {override_name}"
+        );
+    }
+}
+
+#[test]
+fn follows_case_equivalent_story_relationships_and_preserves_zip_spelling() {
+    let main = package_xml("<w:p><w:r><w:t>كتب</w:t></w:r></w:p>");
+    let header = format!("<w:hdr xmlns:w='{WORD}'><w:p><w:r><w:t>رأس</w:t></w:r></w:p></w:hdr>");
+    let footer = format!("<w:ftr xmlns:w='{WORD}'><w:p><w:r><w:t>ذيل</w:t></w:r></w:p></w:ftr>");
+    let mut original = BTreeMap::from([
+        (
+            "[cOnTeNt_TyPeS].XmL".into(),
+            format!("<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'><Default Extension='XML' ContentType='application/xml'/><Default Extension='HDR' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml'/><Override PartName='/WORD/DOCUMENT.XML' ContentType='{MAIN_TYPE}'/><Override PartName='/stories/footer.xml' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml'/></Types>").into_bytes(),
+        ),
+        (
+            "_ReLs/.ReLs".into(),
+            format!("<Relationships xmlns='{PACKAGE_REL}'><Relationship Id='main' Type='{REL}officeDocument' Target='WORD/DOCUMENT.XML'/></Relationships>").into_bytes(),
+        ),
+        ("WoRd/DoCuMeNt.XmL".into(), main.as_bytes().to_vec()),
+        (
+            "WORD/_ReLs/DOCUMENT.XML.ReLs".into(),
+            format!("<Relationships xmlns='{PACKAGE_REL}'><Relationship Id='header' Type='{REL}header' Target='./../WORD/./HEADER.HDR'/><Relationship Id='same-header' Type='{REL}header' Target='header.hdr'/></Relationships>").into_bytes(),
+        ),
+        ("WoRd/Header.HdR".into(), header.as_bytes().to_vec()),
+        (
+            "word/_RELS/HEADER.hdr.RELS".into(),
+            format!("<Relationships xmlns='{PACKAGE_REL}'><Relationship Id='footer' Type='{REL}footer' Target='../STORIES/FOOTER.XML'/></Relationships>").into_bytes(),
+        ),
+        ("Stories/Footer.XML".into(), footer.as_bytes().to_vec()),
+    ]);
+    let input = pack(&original);
+    assert_eq!(transform(&input, |text| Ok(text.into())).unwrap(), input);
+    let mut contexts = Vec::new();
+    let output = transform(&input, |text| {
+        contexts.push(text.to_owned());
+        add_fatha(text)
+    })
+    .unwrap();
+    // The two case-equivalent header references visit the story just once;
+    // its own differently cased relationship filename still reaches the footer.
+    assert_eq!(contexts, ["كتب", "رأس", "ذيل"]);
+    for (name, xml, text) in [
+        ("WoRd/DoCuMeNt.XmL", main, "كتب"),
+        ("WoRd/Header.HdR", header, "رأس"),
+        ("Stories/Footer.XML", footer, "ذيل"),
+    ] {
+        original.insert(
+            name.into(),
+            xml.replace(text, &add_fatha(text).unwrap()).into_bytes(),
+        );
+    }
+    assert_eq!(unpack(&output), original);
+}
+
+#[test]
+fn rejects_case_equivalent_content_type_overrides() {
+    let mut original = parts(&package_xml(""));
+    let types = String::from_utf8(original["[Content_Types].xml"].clone())
+        .unwrap()
+        .replace(
+            "</Types>",
+            &format!("<Override PartName='/WORD/DOCUMENT.XML' ContentType='{MAIN_TYPE}'/></Types>"),
+        );
+    original.insert("[Content_Types].xml".into(), types.into_bytes());
+    assert!(matches!(
+        transform(&pack(&original), |_| panic!("duplicate override reached transformation")),
+        Err(Error::Document(message)) if message.contains("duplicate content-type override")
+    ));
+}
+
+#[test]
+fn case_canonicalization_preserves_internal_uri_restrictions() {
+    for (target, expected_error) in [
+        ("WORD/%44OCUMENT.XML", "unsupported internal package URI"),
+        (
+            "WORD/%2e%2e/DOCUMENT.XML",
+            "unsupported internal package URI",
+        ),
+        ("WORD//DOCUMENT.XML", "empty package URI segment"),
+        ("//WORD/DOCUMENT.XML", "unsupported internal package URI"),
+        ("WORD\\DOCUMENT.XML", "unsupported internal package URI"),
+        (
+            "WORD/DOCUMENT.XML?query",
+            "unsupported internal package URI",
+        ),
+        (
+            "WORD/DOCUMENT.XML#fragment",
+            "unsupported internal package URI",
+        ),
+        ("FILE:WORD/DOCUMENT.XML", "unsupported internal package URI"),
+        (
+            "../WORD/DOCUMENT.XML",
+            "package URI escapes the package root",
+        ),
+        ("WORD/DOCUMENT.XML.", "unsupported or unsafe ZIP part name"),
+    ] {
+        for name in ["_rels/.rels", "[Content_Types].xml"] {
+            let mut original = parts(&package_xml(""));
+            let updated = String::from_utf8(original[name].clone())
+                .unwrap()
+                .replace("word/document.xml", target);
+            original.insert(name.into(), updated.into_bytes());
+            let result = transform(&pack(&original), add_fatha);
+            assert!(
+                matches!(result, Err(Error::Document(ref message)) if message.contains(expected_error)),
+                "{name}, {target}: {result:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn alternate_content_is_visited_once_and_inactive_branches_remain_exact() {
     let xml = package_xml(
         "<w:p xmlns:mc='http://schemas.openxmlformats.org/markup-compatibility/2006' xmlns:wps='http://schemas.microsoft.com/office/word/2010/wordprocessingShape' xmlns:u='urn:unknown'><mc:AlternateContent><mc:Choice Requires='wps'><w:r><w:t>كتب</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>بديل</w:t></w:r></mc:Fallback></mc:AlternateContent><mc:AlternateContent><mc:Choice Requires='u'><w:r><w:t>قديم</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>باب</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>",
