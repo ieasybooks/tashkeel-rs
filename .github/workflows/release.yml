@@ -1,0 +1,143 @@
+name: Release binaries
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Attach archives to this version tag's GitHub release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  notices:
+    # Model-only releases are independent of executable releases.
+    if: github.event_name != 'release' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5.2.3
+        with:
+          install_args: rust cargo-binstall cargo:cargo-about
+      - run: cargo about generate --locked --all-features --workspace --fail about.hbs --output-file THIRD-PARTY-LICENSES
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rust-notices
+          path: THIRD-PARTY-LICENSES
+          if-no-files-found: error
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: notices
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
+          - target: aarch64-apple-darwin
+            os: macos-15
+          - target: x86_64-pc-windows-msvc
+            os: windows-2025
+    env:
+      TARGET: ${{ matrix.target }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
+      EXE_SUFFIX: ${{ matrix.os == 'windows-2025' && '.exe' || '' }}
+      RUSTFLAGS: ${{ matrix.os == 'windows-2025' && '-C target-feature=+crt-static' || '' }}
+      AWS_LC_SYS_PREBUILT_NASM: 1
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install && rustup target add "$TARGET"
+      - name: Validate version tag before publishing
+        if: github.event_name == 'release' || inputs.publish
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(cargo metadata --no-deps --locked --format-version 1 | jq -r '.packages[] | select(.name == "tashkeel-cli") | .version')
+          if [ "$GITHUB_REF_TYPE" != tag ] || [ "$TAG" != "v$version" ]; then
+            echo "::error::Publishing requires the tag v$version"
+            exit 1
+          fi
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: rust-notices
+          path: target/release-notices
+      - name: Install pinned CPU runtime
+        run: python .github/scripts/onnxruntime.py
+      - run: cargo build --release --locked --package tashkeel-cli --target "$TARGET"
+      - name: Package binary, runtime, documentation, and notices
+        run: |
+          name="tashkeel-$VERSION-$TARGET"
+          python .github/scripts/package-docs.py "$name"
+          mkdir -p dist
+          cp "target/$TARGET/release/tashkeel$EXE_SUFFIX" target/release-notices/THIRD-PARTY-LICENSES "$name/"
+          cp "$TASHKEEL_RUNTIME_DIR/ONNXRUNTIME-LICENSE" "$TASHKEEL_RUNTIME_DIR/ONNXRUNTIME-NOTICES" "$name/licenses/"
+          case "$TARGET" in
+            *linux*) cp "$TASHKEEL_RUNTIME_DIR/libonnxruntime.so" "$name/" ;;
+            *darwin*) cp "$TASHKEEL_RUNTIME_DIR/libonnxruntime.dylib" "$name/" ;;
+            *windows*) cp "$TASHKEEL_RUNTIME_DIR/onnxruntime.dll" "$name/" ;;
+          esac
+          if [ "$RUNNER_OS" = Windows ]; then
+            archive="$name.zip"
+            7z a "dist/$archive" "$name"
+          else
+            archive="$name.tar.gz"
+            tar -czf "dist/$archive" "$name"
+          fi
+          cd dist
+          if [ "$RUNNER_OS" = macOS ]; then
+            shasum -a 256 "$archive"
+          else
+            sha256sum "$archive"
+          fi > "$archive.sha256"
+      - name: Smoke test extracted archive with both models
+        run: |
+          name="tashkeel-$VERSION-$TARGET"
+          mkdir -p "$RUNNER_TEMP/tashkeel-extracted"
+          if [ "$RUNNER_OS" = Windows ]; then
+            7z x "dist/$name.zip" "-o$RUNNER_TEMP/tashkeel-extracted"
+          else
+            tar -xzf "dist/$name.tar.gz" -C "$RUNNER_TEMP/tashkeel-extracted"
+          fi
+          python .github/scripts/package-docs.py --check "$RUNNER_TEMP/tashkeel-extracted/$name"
+          unset ORT_DYLIB_PATH
+          python scripts/smoke-models.py "$RUNNER_TEMP/tashkeel-extracted/$name/tashkeel$EXE_SUFFIX"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tashkeel-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  upload:
+    needs: build
+    if: github.event_name == 'release' || inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: tashkeel-*
+          path: dist
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

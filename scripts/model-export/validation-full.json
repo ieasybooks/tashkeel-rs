@@ -1,0 +1,93 @@
+{
+  "model_sha256": "41ed03075e80847aaef2bfdb65f123b7f225ff6a179a507b1ec3e6152184fa71",
+  "gold_sha256": "4e851ff836f0a178abb15d9f4a8bcf92748b77cc0d67030d9fae2fbe698baa12",
+  "published_sha256": "4a88de364b538ca20e65e8d6b6c041eea37942509cbc4ef1ad19392482a8173f",
+  "onnxruntime": "1.31.0",
+  "numpy": "2.5.4",
+  "numpy_recurrence": [
+    {
+      "characters": 30,
+      "max_abs_probability_error": 1.1920928955078125e-07,
+      "argmax_equal": true
+    },
+    {
+      "characters": 100,
+      "max_abs_probability_error": 1.1920928955078125e-07,
+      "argmax_equal": true
+    },
+    {
+      "characters": 500,
+      "max_abs_probability_error": 2.384185791015625e-07,
+      "argmax_equal": true
+    },
+    {
+      "characters": 1000,
+      "max_abs_probability_error": 7.152557373046875e-07,
+      "argmax_equal": true
+    }
+  ],
+  "scope": "unchunked line-level batch-one CPU model; not Rust default chunking or live historical GPU execution",
+  "saved_output_comparison": {
+    "lines": 2500,
+    "exact_lines": 2382,
+    "base_positions": 570202,
+    "different_labels": 140
+  },
+  "fadel_evaluator": {
+    "sha256": "535b729c349965bfcb6863fc65c06a5465d3b900128ce19ce135998620e32fc8",
+    "results": {
+      "published": [
+        {
+          "case_endings": true,
+          "include_no_diacritic": true,
+          "DER_percent": 1.69,
+          "WER_percent": 5.09
+        },
+        {
+          "case_endings": false,
+          "include_no_diacritic": true,
+          "DER_percent": 1.34,
+          "WER_percent": 2.91
+        },
+        {
+          "case_endings": true,
+          "include_no_diacritic": false,
+          "DER_percent": 1.95,
+          "WER_percent": 4.89
+        },
+        {
+          "case_endings": false,
+          "include_no_diacritic": false,
+          "DER_percent": 1.54,
+          "WER_percent": 2.83
+        }
+      ],
+      "onnx": [
+        {
+          "case_endings": true,
+          "include_no_diacritic": true,
+          "DER_percent": 1.68,
+          "WER_percent": 5.08
+        },
+        {
+          "case_endings": false,
+          "include_no_diacritic": true,
+          "DER_percent": 1.34,
+          "WER_percent": 2.9
+        },
+        {
+          "case_endings": true,
+          "include_no_diacritic": false,
+          "DER_percent": 1.94,
+          "WER_percent": 4.87
+        },
+        {
+          "case_endings": false,
+          "include_no_diacritic": false,
+          "DER_percent": 1.53,
+          "WER_percent": 2.83
+        }
+      ]
+    }
+  }
+}

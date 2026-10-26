@@ -1,0 +1,59 @@
+{
+  "chunk_size": 500,
+  "load_ms": 1198.1627409999999,
+  "measurements": [
+    {
+      "characters": 100,
+      "median_ms": 64.084421,
+      "warm_ms": [
+        58.514176,
+        64.084421,
+        75.525379
+      ]
+    },
+    {
+      "characters": 500,
+      "median_ms": 465.03871200000003,
+      "warm_ms": [
+        368.820178,
+        465.03871200000003,
+        481.419655
+      ]
+    },
+    {
+      "characters": 1000,
+      "median_ms": 724.6766329999999,
+      "warm_ms": [
+        678.098137,
+        724.6766329999999,
+        994.688926
+      ]
+    },
+    {
+      "characters": 10000,
+      "median_ms": 22085.607679,
+      "warm_ms": [
+        18918.531542,
+        22085.607679,
+        22491.603122
+      ]
+    }
+  ],
+  "model": "catt",
+  "scope": "tokenization, chunking, native inference and source reconstruction; excludes model download and queueing",
+  "threads": 1,
+  "cpu": "Intel Core i5-8500",
+  "date": "2026-10-26",
+  "runtime": "ONNX Runtime 1.31.0",
+  "load_average_before": [
+    6.82421875,
+    5.7861328125,
+    9.27978515625
+  ],
+  "load_average_after": [
+    18.91162109375,
+    9.53857421875,
+    10.2705078125
+  ],
+  "caveat": "Three warm repetitions on a shared host with package compilation overlapping; one warmup per length. Not an isolated comparison or latency guarantee."
+}

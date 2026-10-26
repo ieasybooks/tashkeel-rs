@@ -1,0 +1,30 @@
+[package]
+name = "tashkeel"
+version = "0.1.0"
+description = "Arabic diacritization with Shakkelha and CATT on the CPU."
+readme = "README.md"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories = ["text-processing"]
+
+[dependencies]
+docxml.workspace = true
+ort.workspace = true
+quick-xml.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+unicode-normalization.workspace = true
+zip.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+libloading.workspace = true
+
+[lints]
+workspace = true

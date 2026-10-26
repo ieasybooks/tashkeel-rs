@@ -1,0 +1,120 @@
+{
+  "model_sha256": "41ed03075e80847aaef2bfdb65f123b7f225ff6a179a507b1ec3e6152184fa71",
+  "checkpoint_sha256": "46b18b13c3e3f9a45434d1ba70086e0ab6556456b6e3282b02bfb16ec4eed1ca",
+  "gpu_weight_comparison": [
+    {
+      "gpu": "bidirectional_1/bidirectional_1/backward_cu_dnnlstm_1/bias:0",
+      "cpu": "bidirectional_11/bidirectional_11/backward_lstm_11/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_1/bidirectional_1/backward_cu_dnnlstm_1/kernel:0",
+      "cpu": "bidirectional_11/bidirectional_11/backward_lstm_11/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_1/bidirectional_1/backward_cu_dnnlstm_1/recurrent_kernel:0",
+      "cpu": "bidirectional_11/bidirectional_11/backward_lstm_11/recurrent_kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_1/bidirectional_1/forward_cu_dnnlstm_1/bias:0",
+      "cpu": "bidirectional_11/bidirectional_11/forward_lstm_11/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_1/bidirectional_1/forward_cu_dnnlstm_1/kernel:0",
+      "cpu": "bidirectional_11/bidirectional_11/forward_lstm_11/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_1/bidirectional_1/forward_cu_dnnlstm_1/recurrent_kernel:0",
+      "cpu": "bidirectional_11/bidirectional_11/forward_lstm_11/recurrent_kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_2/bidirectional_2/backward_cu_dnnlstm_2/bias:0",
+      "cpu": "bidirectional_12/bidirectional_12/backward_lstm_12/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_2/bidirectional_2/backward_cu_dnnlstm_2/kernel:0",
+      "cpu": "bidirectional_12/bidirectional_12/backward_lstm_12/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_2/bidirectional_2/backward_cu_dnnlstm_2/recurrent_kernel:0",
+      "cpu": "bidirectional_12/bidirectional_12/backward_lstm_12/recurrent_kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_2/bidirectional_2/forward_cu_dnnlstm_2/bias:0",
+      "cpu": "bidirectional_12/bidirectional_12/forward_lstm_12/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_2/bidirectional_2/forward_cu_dnnlstm_2/kernel:0",
+      "cpu": "bidirectional_12/bidirectional_12/forward_lstm_12/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "bidirectional_2/bidirectional_2/forward_cu_dnnlstm_2/recurrent_kernel:0",
+      "cpu": "bidirectional_12/bidirectional_12/forward_lstm_12/recurrent_kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "embedding_1/embedding_1/embeddings:0",
+      "cpu": "embedding_6/embedding_6/embeddings:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "time_distributed_1/time_distributed_1/bias:0",
+      "cpu": "time_distributed_14/time_distributed_14/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "time_distributed_1/time_distributed_1/kernel:0",
+      "cpu": "time_distributed_14/time_distributed_14/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "time_distributed_2/time_distributed_2/bias:0",
+      "cpu": "time_distributed_15/time_distributed_15/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "time_distributed_2/time_distributed_2/kernel:0",
+      "cpu": "time_distributed_15/time_distributed_15/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "time_distributed_3/time_distributed_3/bias:0",
+      "cpu": "time_distributed_16/time_distributed_16/bias:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "gpu": "time_distributed_3/time_distributed_3/kernel:0",
+      "cpu": "time_distributed_16/time_distributed_16/kernel:0",
+      "exact_equal": true,
+      "max_abs_error": 0.0
+    }
+  ]
+}
