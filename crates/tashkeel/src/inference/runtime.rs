@@ -5,7 +5,10 @@ use std::{
 
 use ort::{
     environment::Environment,
-    session::{Session, builder::GraphOptimizationLevel},
+    session::{
+        Session,
+        builder::{AutoDevicePolicy, GraphOptimizationLevel},
+    },
     value::{Outlet, Tensor, TensorElementType, ValueType},
 };
 
@@ -99,11 +102,27 @@ fn resolve_runtime_path(requested: Option<PathBuf>, library_name: &str) -> Resul
             "Windows requires onnxruntime.dll beside the executable, or an explicit library path through runtime_path / --ort-library / ORT_DYLIB_PATH",
         ));
     }
+    if cfg!(target_os = "macos") {
+        // dyld can search the current directory for a bare dlopen filename.
+        // Require a selected path, just as on Windows, before loading code.
+        return Err(failure(
+            "macOS requires libonnxruntime.dylib beside the executable, or an explicit library path through runtime_path / --ort-library / ORT_DYLIB_PATH",
+        ));
+    }
     Ok(library_name.into())
 }
 
 fn session(environment: &Environment, path: &Path, threads: usize) -> Result<Session> {
     Session::builder(environment)
+        .map_err(failure)?
+        // ort rc.15 defaults to automatic device selection and inherits the
+        // host's providers/global pools. Override all three to preserve our
+        // CPU-only contract and the requested per-session thread count.
+        .with_no_environment_execution_providers()
+        .map_err(failure)?
+        .with_auto_device(AutoDevicePolicy::PreferCPU)
+        .map_err(failure)?
+        .with_independent_thread_pool()
         .map_err(failure)?
         .with_intra_threads(threads)
         .map_err(failure)?
@@ -166,7 +185,12 @@ fn single_output(session: &Session, width: i64) -> Result<()> {
 }
 
 impl Backend {
-    pub(super) fn load(model: Model, directory: &Path, options: &InferenceOptions) -> Result<Self> {
+    pub(super) fn load(
+        model: Model,
+        directory: &Path,
+        options: &InferenceOptions,
+        host_environment: Option<&Environment>,
+    ) -> Result<Self> {
         let names: &[&str] = match model {
             Model::Shakkelha => &["model.onnx"],
             Model::Catt => &["encoder.onnx", "decoder.onnx"],
@@ -180,7 +204,10 @@ impl Backend {
                 )));
             }
         }
-        let environment = environment(options)?;
+        let environment = match host_environment {
+            Some(environment) => environment.clone(),
+            None => environment(options)?,
+        };
         match model {
             Model::Shakkelha => {
                 let session =
@@ -332,7 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn platform_loader_fallback_is_disabled_on_windows() {
+    fn platform_loader_fallback_is_disabled_on_windows_and_macos() {
         let resolved = resolve_runtime_path(None, "onnxruntime-test");
         if cfg!(windows) {
             assert!(
@@ -341,6 +368,8 @@ mod tests {
                     .to_string()
                     .contains("Windows requires")
             );
+        } else if cfg!(target_os = "macos") {
+            assert!(resolved.unwrap_err().to_string().contains("macOS requires"));
         } else {
             assert_eq!(resolved.unwrap(), std::path::Path::new("onnxruntime-test"));
         }

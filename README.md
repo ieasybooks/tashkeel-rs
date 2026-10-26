@@ -49,7 +49,7 @@ std::fs::write("output.docx", result)?;
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-Keep an engine alive across requests. Async servers should run inference and model setup on bounded blocking workers; see [integration](docs/integration.md).
+Keep an engine alive across requests. Applications that already initialize `ort` can use `Diacritizer::load_with_environment` to share their existing environment. Async servers should run inference and model setup on bounded blocking workers; see [integration](docs/integration.md).
 
 ## Development
 
