@@ -82,14 +82,13 @@ jobs:
       - name: Install pinned CPU runtime
         run: python .github/scripts/onnxruntime.py
       - run: cargo build --release --locked --package tashkeel-cli --target "$TARGET"
-      - name: Package binary, runtime, and notices
+      - name: Package binary, runtime, documentation, and notices
         run: |
           name="tashkeel-$VERSION-$TARGET"
-          mkdir -p "$name/docs" "$name/licenses" dist
-          cp "target/$TARGET/release/tashkeel$EXE_SUFFIX" README.md LICENSE target/release-notices/THIRD-PARTY-LICENSES "$name/"
-          cp licenses/* "$name/licenses/"
+          python .github/scripts/package-docs.py "$name"
+          mkdir -p dist
+          cp "target/$TARGET/release/tashkeel$EXE_SUFFIX" target/release-notices/THIRD-PARTY-LICENSES "$name/"
           cp "$TASHKEEL_RUNTIME_DIR/ONNXRUNTIME-LICENSE" "$TASHKEEL_RUNTIME_DIR/ONNXRUNTIME-NOTICES" "$name/licenses/"
-          cp docs/cli.md docs/tashkeel.1 docs/models.md docs/docx.md docs/runtime.md "$name/docs/"
           case "$TARGET" in
             *linux*) cp "$TASHKEEL_RUNTIME_DIR/libonnxruntime.so" "$name/" ;;
             *darwin*) cp "$TASHKEEL_RUNTIME_DIR/libonnxruntime.dylib" "$name/" ;;
@@ -117,6 +116,7 @@ jobs:
           else
             tar -xzf "dist/$name.tar.gz" -C "$RUNNER_TEMP/tashkeel-extracted"
           fi
+          python .github/scripts/package-docs.py --check "$RUNNER_TEMP/tashkeel-extracted/$name"
           unset ORT_DYLIB_PATH
           python scripts/smoke-models.py "$RUNNER_TEMP/tashkeel-extracted/$name/tashkeel$EXE_SUFFIX"
       - uses: actions/upload-artifact@v7

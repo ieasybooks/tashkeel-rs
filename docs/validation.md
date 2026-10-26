@@ -9,6 +9,7 @@ cargo test --workspace --locked
 cargo deny --locked check
 cargo about generate --locked --all-features --workspace --fail about.hbs --output-file /tmp/tashkeel-notices.txt
 actionlint
+python3 .github/scripts/package-docs.py /tmp/tashkeel-release-docs
 sh scripts/cli-docs.sh
 git diff --exit-code -- docs/cli.md docs/tashkeel.1
 ```
@@ -22,12 +23,22 @@ Provision CPU ONNX Runtime with `.github/scripts/onnxruntime.py`, then download 
 ```sh
 export TASHKEEL_TEST_SHAKKELHA_DIR=/absolute/path/to/shakkelha/v1
 export TASHKEEL_TEST_CATT_DIR=/absolute/path/to/catt/v1
-cargo test --test real_cli -- --ignored --test-threads=1
+cargo test --workspace --locked -- --ignored --test-threads=1
 ```
 
-These opt-in CLI checks cover both models with direct text, stdin, TXT, and DOCX; UTF-8 BOMs, CRLF, whitespace, and final-newline preservation; offline local files; and cancellation without publishing partial output. Inference-specific tests and checkpoint conversion evidence are documented in [model validation](model-validation.md).
+This workspace-wide command runs the ignored library and integration tests, including the separate host-environment test binary. The library checks cover fixture parity, repeated model loads, chunk boundaries, and cancellation. The CLI checks cover both models with direct text, stdin, TXT, and DOCX; UTF-8 BOMs, CRLF, whitespace, and final-newline preservation; offline local files; and cancellation without publishing partial output. Inference-specific tests and checkpoint conversion evidence are documented in [model validation](model-validation.md).
 
 `python3 scripts/smoke-models.py /absolute/path/to/tashkeel` exercises downloads, real CPU inference, original-text preservation, and repeatable offline execution. It changes the child process's working directory to catch accidental assumptions about the checkout or runtime location. Set `TASHKEEL_SMOKE_CACHE` to reuse a cache between runs. CI and extracted release archives run this smoke check.
+
+Native-model CI retains this cache under the runner's temporary directory. After the smoke check downloads both models, Linux x64 runs the workspace-wide ignored tests with `TASHKEEL_TEST_SHAKKELHA_DIR=$TASHKEEL_SMOKE_CACHE/shakkelha/v1`, `TASHKEEL_TEST_CATT_DIR=$TASHKEEL_SMOKE_CACHE/catt/v1`, and the runtime helper's `ORT_DYLIB_PATH`. The smoke step unsets that runtime variable only in its own shell to exercise the adjacent-library lookup; the later test step inherits the helper's setting. This reuses the verified downloads and includes new ignored integration test binaries automatically.
+
+After their smoke checks, the native Apple and Windows jobs run `.github/scripts/macos-loader-regression.py` and `.github/scripts/windows-loader-regression.py`, respectively, with `--binary` pointing to the relocated executable and `--model-dir` pointing to the same cached `shakkelha/v1` directory. Keep the Windows unrestricted-load, rejected-CWD-dependency, and accepted-adjacent-dependency stages together. These native jobs must pass before claiming platform-specific loader behavior; configuring CI alone does not establish it.
+
+## Offline release documentation
+
+[The documentation packager](../.github/scripts/package-docs.py) copies the original README, complete `docs/` tree, [release guide](../.github/RELEASING.md), licenses, and the small scripts, benchmark example, tokenizer data, and validation reports they reference, retaining their repository-relative paths. Model weights, caches, and build outputs are excluded. Cargo development, benchmark, and publishing commands still require a source checkout and their documented dependencies.
+
+The model-free CI job stages these files and verifies that relative Markdown file links stay within the bundle and resolve, including links from the library notices to their license texts. The release job repeats the check after extracting each archive using `python3 .github/scripts/package-docs.py --check /path/to/extracted/tashkeel-VERSION-TARGET`. The check needs no network, native runtime, or model downloads; external upstream URLs and heading fragments are outside its scope.
 
 ## Compatibility boundaries
 

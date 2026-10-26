@@ -27,6 +27,8 @@ jobs:
       - name: Check dependency notices
         run: cargo about generate --locked --all-features --workspace --fail about.hbs --output-file "$RUNNER_TEMP/THIRD-PARTY-LICENSES"
       - run: actionlint
+      - name: Check offline release documentation
+        run: python .github/scripts/package-docs.py "$RUNNER_TEMP/tashkeel-release-docs"
       - name: Check generated CLI reference
         run: |
           sh scripts/cli-docs.sh
@@ -85,20 +87,30 @@ jobs:
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - name: Install pinned CPU ONNX Runtime
-        run: python .github/scripts/onnxruntime.py
+        run: |
+          python .github/scripts/onnxruntime.py
+          echo "TASHKEEL_SMOKE_CACHE=$RUNNER_TEMP/tashkeel-smoke-cache" >> "$GITHUB_ENV"
       - run: cargo build --locked
       - name: Exercise both models with a relocated binary and adjacent runtime
-        env:
-          TASHKEEL_SMOKE_CACHE: ${{ runner.temp }}/tashkeel-smoke-cache
         run: |
           mkdir -p "$RUNNER_TEMP/tashkeel-relocated"
           cp "target/debug/$EXECUTABLE" "$TASHKEEL_RUNTIME_DIR/$LIBRARY" "$RUNNER_TEMP/tashkeel-relocated/"
           unset ORT_DYLIB_PATH
           python scripts/smoke-models.py "$RUNNER_TEMP/tashkeel-relocated/$EXECUTABLE"
+      - name: Run ignored real-model library and CLI tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          export TASHKEEL_TEST_SHAKKELHA_DIR="$TASHKEEL_SMOKE_CACHE/shakkelha/v1"
+          export TASHKEEL_TEST_CATT_DIR="$TASHKEEL_SMOKE_CACHE/catt/v1"
+          cargo test --workspace --locked -- --ignored --test-threads=1
+      - name: Verify macOS runtime loading and symbol validation
+        if: runner.os == 'macOS'
+        run: |
+          python .github/scripts/macos-loader-regression.py \
+            --binary "$RUNNER_TEMP/tashkeel-relocated/$EXECUTABLE" \
+            --model-dir "$TASHKEEL_SMOKE_CACHE/shakkelha/v1"
       - name: Verify Windows dependency DLL search excludes the working directory
         if: runner.os == 'Windows'
-        env:
-          TASHKEEL_SMOKE_CACHE: ${{ runner.temp }}/tashkeel-smoke-cache
         run: |
           python .github/scripts/windows-loader-regression.py \
             --binary "$RUNNER_TEMP/tashkeel-relocated/$EXECUTABLE" \
