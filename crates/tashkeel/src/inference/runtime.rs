@@ -5,10 +5,7 @@ use std::{
 
 use ort::{
     environment::Environment,
-    session::{
-        Session,
-        builder::{AutoDevicePolicy, GraphOptimizationLevel},
-    },
+    session::{Session, builder::GraphOptimizationLevel},
     value::{Outlet, Tensor, TensorElementType, ValueType},
 };
 
@@ -113,14 +110,22 @@ fn resolve_runtime_path(requested: Option<PathBuf>, library_name: &str) -> Resul
 }
 
 fn session(environment: &Environment, path: &Path, threads: usize) -> Result<Session> {
+    // PreferCPU still automatically selects registered non-default CPU EPs
+    // in ORT 1.31. Select the built-in provider explicitly; its presence is
+    // required rather than falling back to a host plugin or automatic policy.
+    let cpu = environment
+        .devices()
+        .find(|device| matches!(device.ep(), Ok("CPUExecutionProvider")))
+        .ok_or_else(|| {
+            failure("ONNX Runtime does not expose its built-in CPUExecutionProvider device")
+        })?;
     Session::builder(environment)
         .map_err(failure)?
-        // ort rc.15 defaults to automatic device selection and inherits the
-        // host's providers/global pools. Override all three to preserve our
-        // CPU-only contract and the requested per-session thread count.
+        // Suppress the Rust environment's default providers as well as native
+        // automatic selection, and retain our per-session thread settings.
         .with_no_environment_execution_providers()
         .map_err(failure)?
-        .with_auto_device(AutoDevicePolicy::PreferCPU)
+        .with_devices([cpu], None)
         .map_err(failure)?
         .with_independent_thread_pool()
         .map_err(failure)?

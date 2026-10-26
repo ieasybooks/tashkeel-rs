@@ -88,7 +88,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install pinned CPU ONNX Runtime
         run: |
-          python .github/scripts/onnxruntime.py
+          tashkeel_runtime_args=()
+          if [ "$RUNNER_OS" = Linux ] && [ "$RUNNER_ARCH" = X64 ]; then
+            tashkeel_runtime_args+=(--include-headers)
+          fi
+          python .github/scripts/onnxruntime.py "${tashkeel_runtime_args[@]}"
           echo "TASHKEEL_SMOKE_CACHE=$RUNNER_TEMP/tashkeel-smoke-cache" >> "$GITHUB_ENV"
       - run: cargo build --locked
       - name: Exercise both models with a relocated binary and adjacent runtime

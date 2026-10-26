@@ -40,6 +40,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", choices=ARTIFACTS, default=os.environ.get("TARGET"))
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--include-headers", action="store_true", help="also provision pinned C headers for the native provider regression")
     args = parser.parse_args()
     target = args.target or host_target()
     name, extension, size, digest = ARTIFACTS[target]
@@ -64,6 +65,10 @@ def main():
     else:
         library, installed = "lib/onnxruntime.dll", "onnxruntime.dll"
     selected = {library: installed, "LICENSE": "ONNXRUNTIME-LICENSE", "ThirdPartyNotices.txt": "ONNXRUNTIME-NOTICES"}
+    if args.include_headers:
+        (output / "include").mkdir(exist_ok=True)
+        for header in ("onnxruntime_c_api.h", "onnxruntime_ep_c_api.h", "onnxruntime_error_code.h"):
+            selected[f"include/{header}"] = f"include/{header}"
     # Read only specific files; archive paths never become output paths.
     if extension == "zip":
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
@@ -87,6 +92,8 @@ def main():
     if os.environ.get("GITHUB_ENV"):
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
             env.write(f"ORT_DYLIB_PATH={runtime}\nTASHKEEL_RUNTIME_DIR={output}\n")
+            if args.include_headers:
+                env.write(f"TASHKEEL_TEST_ORT_INCLUDE_DIR={output / 'include'}\n")
     print(runtime)
 
 

@@ -11,6 +11,12 @@ use std::{
 use ort::{environment::GlobalThreadPoolOptions, ep, logging::LogLevel, session::Session};
 use tashkeel::{Diacritizer, Error, InferenceOptions, Model, models, text::strip_tashkeel};
 
+#[cfg(target_os = "linux")]
+#[path = "support/ort_cpu_plugin.rs"]
+mod cpu_plugin;
+
+const PLUGIN_SELECTED_MARKER: &str = "tashkeel sentinel CPU plugin selected";
+
 // The first Python ONNX Runtime CPU fixtures in src/inference/fixtures.rs.
 // Shakkelha's expected string renders the saved reference labels using its
 // embedded vocabulary; CATT's string is also saved in the upstream fixture.
@@ -60,6 +66,7 @@ fn host_environment(
             if message.starts_with("Session Options {")
                 || message.contains("use_per_session_threads_")
                 || message.contains("All nodes placed on")
+                || message.contains(PLUGIN_SELECTED_MARKER)
             {
                 captured.lock().unwrap().push(message.to_owned());
             }
@@ -94,6 +101,16 @@ fn host_environment_keeps_cpu_sessions_and_lifetime() {
             && message.contains("enable_cpu_mem_arena:0")
             && message.contains("use_per_session_threads:0")
     }));
+
+    #[cfg(target_os = "linux")]
+    let _plugin = cpu_plugin::register_and_check_control(&host, &shakkelha_dir.join("model.onnx"));
+    #[cfg(target_os = "linux")]
+    assert!(
+        logs.lock()
+            .unwrap()
+            .iter()
+            .any(|message| message.contains(PLUGIN_SELECTED_MARKER))
+    );
     logs.lock().unwrap().clear();
 
     // Even the same native path is ambiguous here and must be rejected rather
@@ -159,7 +176,6 @@ fn assert_session_settings(logs: &[String]) {
         assert!(message.contains("use_per_session_threads:1"), "{message}");
         assert!(message.contains("enable_cpu_mem_arena:1"), "{message}");
         assert!(message.contains("execution_mode:0"), "{message}");
-        assert!(message.contains("ep_selection_policy:1"), "{message}");
         assert!(
             message.contains(&format!(
                 "intra_op_param:OrtThreadPoolParams {{ thread_pool_size: {threads}"
@@ -187,5 +203,10 @@ fn assert_session_settings(logs: &[String]) {
         placements
             .iter()
             .all(|message| message.contains("[CPUExecutionProvider]"))
+    );
+    assert!(
+        !logs
+            .iter()
+            .any(|message| message.contains(PLUGIN_SELECTED_MARKER))
     );
 }

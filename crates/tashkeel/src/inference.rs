@@ -150,8 +150,9 @@ impl Diacritizer {
     /// Sessions retain shared ownership of the environment, so the caller may
     /// drop its handle after loading. Keep a handle to create later engines;
     /// `ort` cannot create a replacement environment even after all handles drop.
-    /// Sessions use only CPU execution, ignore the environment's default execution
-    /// providers, and use independent thread pools honoring `options.threads`.
+    /// Sessions explicitly select the built-in `CPUExecutionProvider` device,
+    /// fail if it is unavailable, ignore host default providers and CPU/GPU
+    /// plugins, and use independent thread pools honoring `options.threads`.
     /// Other host settings, including logging and telemetry, remain in effect.
     /// Artifact verification is the caller's responsibility, as with [`Self::load`].
     pub fn load_with_environment(
