@@ -88,8 +88,18 @@ jobs:
         run: python .github/scripts/onnxruntime.py
       - run: cargo build --locked
       - name: Exercise both models with a relocated binary and adjacent runtime
+        env:
+          TASHKEEL_SMOKE_CACHE: ${{ runner.temp }}/tashkeel-smoke-cache
         run: |
           mkdir -p "$RUNNER_TEMP/tashkeel-relocated"
           cp "target/debug/$EXECUTABLE" "$TASHKEEL_RUNTIME_DIR/$LIBRARY" "$RUNNER_TEMP/tashkeel-relocated/"
           unset ORT_DYLIB_PATH
           python scripts/smoke-models.py "$RUNNER_TEMP/tashkeel-relocated/$EXECUTABLE"
+      - name: Verify Windows dependency DLL search excludes the working directory
+        if: runner.os == 'Windows'
+        env:
+          TASHKEEL_SMOKE_CACHE: ${{ runner.temp }}/tashkeel-smoke-cache
+        run: |
+          python .github/scripts/windows-loader-regression.py \
+            --binary "$RUNNER_TEMP/tashkeel-relocated/$EXECUTABLE" \
+            --model-dir "$TASHKEEL_SMOKE_CACHE/shakkelha/v1"

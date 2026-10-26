@@ -23,5 +23,8 @@ thiserror.workspace = true
 unicode-normalization.workspace = true
 zip.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+libloading.workspace = true
+
 [lints]
 workspace = true

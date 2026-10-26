@@ -11,6 +11,10 @@ use ort::{
 
 use crate::{Error, InferenceOptions, Model, Result};
 
+#[cfg(windows)]
+#[path = "windows_runtime.rs"]
+mod windows_runtime;
+
 // ort rc.15 permits one Environment creation for the lifetime of the process,
 // even after its last session is dropped. Keep it alive and share clones.
 static RUNTIME: Mutex<Option<(PathBuf, Environment)>> = Mutex::new(None);
@@ -60,6 +64,13 @@ fn environment(options: &InferenceOptions) -> Result<Environment> {
         }
         return Ok(environment.clone());
     }
+    // ort rc.15 uses LoadLibraryExW with flags 0, even for an absolute path.
+    // Resolve dependencies with restricted flags first, and keep this handle
+    // alive through init_from/build so ort acquires its own reference to the
+    // already-loaded module without repeating the dependency search.
+    #[cfg(windows)]
+    let _preloaded = windows_runtime::preload(&requested)?;
+
     // Explicit initialization returns load errors instead of ort's implicit
     // initialization panic when the native library is missing or too old.
     let environment = ort::init_from(&requested)

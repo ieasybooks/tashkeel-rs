@@ -46,6 +46,7 @@ anyhow = "1.0.104"
 ctrlc = "3.5.2"
 dirs = "7.0.0"
 docxml = "=0.3.1"
+libloading = "0.9.0"
 ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-31"] }
 quick-xml = "0.41.0"
 reqwest = { version = "0.13.5", features = ["blocking"] }
@@ -59,7 +60,9 @@ usage-rs = "7.1.2"
 zip = { version = "9.1.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# Only the private Windows runtime preload permits unsafe code: ort has no API
+# for restricting dependency DLL search. All other workspace code denies it.
+unsafe_code = "deny"
 missing_docs = "warn"
 unreachable_pub = "warn"
 
