@@ -1,6 +1,6 @@
 [package]
 name = "tashkeel-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "CPU Arabic diacritization of text and DOCX documents."
 edition.workspace = true
 rust-version.workspace = true
@@ -19,7 +19,7 @@ doc = false
 anyhow.workspace = true
 ctrlc.workspace = true
 dirs.workspace = true
-tashkeel = { path = "crates/tashkeel", version = "0.1.0" }
+tashkeel = { path = "crates/tashkeel", version = "0.1.1" }
 tempfile.workspace = true
 usage-rs = { workspace = true, features = ["completions", "response-files"] }
 

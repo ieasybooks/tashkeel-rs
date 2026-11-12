@@ -1717,7 +1717,7 @@ dependencies = [
 
 [[package]]
 name = "tashkeel"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "docxml",
  "libloading",
@@ -1735,7 +1735,7 @@ dependencies = [
 
 [[package]]
 name = "tashkeel-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "ctrlc",

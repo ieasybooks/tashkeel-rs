@@ -1,6 +1,6 @@
 [package]
 name = "tashkeel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Arabic diacritization with Shakkelha and CATT on the CPU."
 readme = "README.md"
 edition.workspace = true

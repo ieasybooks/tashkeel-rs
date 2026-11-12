@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/ieasybooks/tashkeel-rs/compare/v0.1.0...v0.1.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **deps:** update zstd and scope the new zip advisory ([d8e827f](https://github.com/ieasybooks/tashkeel-rs/commit/d8e827fb4555b5b896323c7a0fe31edb10e36d28))
+
 ## 0.1.0 (2026-10-26)
 
 
